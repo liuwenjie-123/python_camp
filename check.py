@@ -1,6 +1,7 @@
-import os
+import os, socket
 import configparser
 from multiping import MultiPing
+from multiping import multi_ping
 import re
 import time
 
@@ -8,10 +9,12 @@ import requests
 import json
 import prettytable as pt
 
+sock = socket.socket()
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 IP_LIST_PATH = os.path.join(BASE_PATH, "ip_list")
 DATA_PATH = os.path.join(BASE_PATH, "data")
+LOG_FILE_PATH = os.path.join(BASE_PATH, "log", "{}.txt".format(time.strftime("%Y-%m", time.localtime())),)
 
 
 def get_ip_list(ip_list_path):
@@ -40,6 +43,7 @@ def get_ip_list(ip_list_path):
                 # print(key)
                 ip_dict[project_name][count][items].append(key[0])
             count += 1
+        print(ip_dict)
     return ip_dict
 
 
@@ -54,10 +58,14 @@ def get_down_ip(ip_list_dict):
                 mp = MultiPing(ip_list)
                 mp.send()
                 responses, no_responses = mp.receive(1)
-                # print(no_responses)
+                # responses, no_responses = multi_ping(ip_list, timeout=3, retry=2)
                 no_responses.append(len(area_dict_value))
                 #把不通的IP替换原来的列表里的IP
                 ip_list_dict[project_name][count][area_dict_key] = no_responses
+                # 查看默认发送接收缓冲区大小
+                recv_buff = sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+                send_buff = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+                print(f'默认接收缓冲区大小：{recv_buff}。默认发送缓冲区大小：{send_buff}')
             count += 1
     return ip_list_dict
 
@@ -74,7 +82,11 @@ def sed_info_tab(ip_list_dict):
         tb.field_names = ["区域", "离线数", "总数", "离线率"]
         for i in pronject_info: tb.add_row(i)
         ding = DingTalk_Disaster()
-        # ding.send_msg("瑞云-{}\n{}".format(project_name, tb))
+        ding.send_msg("瑞云-{}\n{}".format(project_name, tb))
+
+def sed_ml_dd(ml_total):
+    ding = DingTalk_Disaster()
+    ding.send_msg(ml_total)
 
 
 def intersection(ip_list_dict_1, ip_list_dict_2):
@@ -92,24 +104,31 @@ def intersection(ip_list_dict_1, ip_list_dict_2):
 
 
 def output_offline_info(ip_list_dict):
+    ml_total = ""
     for project_name, pronject_area_list in ip_list_dict.items():
         # print(project_name, pronject_area_list)
-        print(project_name.center(40, "#"))
+        # print(project_name.center(40, "#"))
+        ml = "{}\n".format("瑞云-{}".format(project_name).center(40, "#"))
         for area_dict in pronject_area_list:
             for area_dict_key, area_dict_value in area_dict.items():
                 prondect_data_path = os.path.join(DATA_PATH, "{}{}".format(project_name, ".txt"))
                 with open(prondect_data_path, mode="r", encoding='utf-8') as data:
                     f = data.read()
-                    print(str(area_dict_key).center(20, "="))
+                    # print(str(area_dict_key).center(20, "="))
+                    ml += "{}\n".format(str(area_dict_key).center(20, "="))
                     if len(area_dict_value) <= 1:
                         continue
                     for i in range(0, len(area_dict_value)-1):
                         mc = re.findall(".*{}\s".format(area_dict_value[i]), f)
-                        print("{}\t{}\t{}".format(mc[0].split()[0], mc[0].split()[1], mc[0].split()[2]))
+                        if not mc:
+                            print("{}没找到对应的机位".format(area_dict_value[i]))
+                            continue
+                        ml += "{}\t{}\t{}\n".format(mc[0].split()[0], mc[0].split()[1], mc[0].split()[2])
                         # print(mc[0].split()[0], "\t", mc[0].split()[1], "\t", mc[0].split()[2])
-        print("".center(40, "#"))
-        print()
-
+        # print("".center(40, "#"))
+        ml += "{}\n\n".format("".center(40, "#"),)
+        ml_total += ml
+    return ml_total
 
 
 class DingTalk_Base:
@@ -138,18 +157,32 @@ class DingTalk_Disaster(DingTalk_Base):
 
 
 
+
+
+
+
+
 if __name__ == '__main__':
+    start_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    with open(LOG_FILE_PATH, mode="at", encoding="utf-8") as f:
+        f.write("程序开始执行{}\n".format(start_time))
     ip_down_dict = {}
     ip_down_dict_2 = {}
-    for i in range(1, 6):
+    for i in range(1, 4):
         ip_dict = get_ip_list(IP_LIST_PATH)
         ip_down_dict_1 = get_down_ip(ip_dict)
         if i == 1:
-            print(i)
             ip_down_dict_2 = ip_down_dict_1
             continue
         ip_down_dict = intersection(ip_down_dict_1, ip_down_dict_2)
-        time.sleep(50)
+        time.sleep(10)
+        with open(LOG_FILE_PATH, mode="at", encoding="utf-8") as f:
+            f.write("ip_down_dict内容为：{}\n".format(ip_down_dict))
+    ml_total = output_offline_info(ip_down_dict)
+    print(ml_total)
+    # sed_ml_dd(ml_total)
     # sed_info_tab(ip_down_dict)
-    print(ip_down_dict)
-    output_offline_info(ip_down_dict)
+    end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    with open(LOG_FILE_PATH, mode="at", encoding="utf-8") as f:
+        f.write(ml_total)
+        f.write("程序结束时间{}\n\n\n".format(end_time))

@@ -1,0 +1,5 @@
+1、在zk_script.exe 同目录下需创建logs文件夹、ip.txt文件
+2、ip.txt文件格式为ip-ipmi
+3、需要配置ipmitool为环境变量，能直接在cmd输入ipmitool执行的那种
+4、把cmd的路径切换到zk_script.exe的目录，然后执行zk_script.exe
+5、目前逻辑是，先检查1遍，120s后再检查一遍，2次都是离线的机器才重启，然后睡眠1小时再执行下一次检查

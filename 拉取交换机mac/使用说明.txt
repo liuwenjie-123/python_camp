@@ -1,0 +1,2 @@
+1、把交换机mac写入ip.txt文件，一行一个，不要有空格
+2、用python3(python版本>=3.9)运行sw.py
