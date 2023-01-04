@@ -53,7 +53,7 @@ def fmt(dic):
                     ]}
             """
             ip = details["ip"]
-            print(ip)
+            # print(ip)
             event = details["event"]  # [{'msg': 'network-error', 'operator': 'lhq_script', 'time': '2022-03-13 16:35:48'},]
             event_num = len(event)
             if not event:
@@ -61,10 +61,11 @@ def fmt(dic):
             else:
                 msg = event[-1]["msg"]
 
+            # 跟据ip查找机位信息
             with open("placement_info.txt", mode="r", encoding='utf-8') as data:
                 f = data.read()
                 row = re.findall(".*{}\t.*".format(ip), f)
-                print(row, ip)
+                print(row, "当前ip",ip)
                 if not row:
                     info_list.append(
                         "{area}\t{ip}\t{msg}\t{event_num}\t{enclosure}\t{NodeNumber}\t{Port}\t{DeliveryTime}\t{peer_to_peer_ip}".format(
@@ -98,6 +99,7 @@ def fmt(dic):
                         else:
                             peer_to_peer_ip += "{}为空,".format(node)
 
+                # 双节点机器
                 elif row_l[1].split(".", -1)[-1] == "1":
                     row_l_escape = row_l[0].replace("(", "\(")
                     row_l_escape = row_l_escape.replace(")", "\)")

@@ -42,6 +42,7 @@ def reboot(reb_ip_list, ip_dict):
     cmd_list = ["ipmitool -H {} -I lan -U admin -P admin sel clear",
                 "ipmitool -H {} -U admin -P admin chassis bootdev pxe",
                 "ipmitool -H {} -I lan -U admin -P admin power cycle",
+                "ipmitool -H {} -I lan -U admin -P admin power on",
                 ]
     for i in reb_ip_list:
         reb_ipmi_ip = ip_dict[i]
@@ -71,10 +72,10 @@ if __name__ == '__main__':
         no_ping2 = ping_check(ip_list)
         # 取交集
         no_ping = intersection(no_ping1, no_ping2)
-        if int(len(no_ping)) > 40:
+        if int(len(no_ping)) > 60:
             with open(logs, mode="at", encoding="utf-8") as log_f:
-                log_f.write("{} 超过40路不通，不进行重启操作，ip为：{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), ",".join(no_ping)))
-            print("{} 第{}轮 超过40路不通，不进行重启操作，ip为：{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),  count,",".join(no_ping)))
+                log_f.write("{} 超过60路不通，不进行重启操作，ip为：{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), ",".join(no_ping)))
+            print("{} 第{}轮 超过60路不通，不进行重启操作，ip为：{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),  count,",".join(no_ping)))
         elif not int(len(no_ping)):
             print("{} 第{}轮 机器均为在线状态，不进行重启".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),  count))
         else:

@@ -27,7 +27,7 @@ SW = {
     'password':'Rayvision@2017'
 }
 
-ip_ile_path = os.path.join(BASE_DIR_PATH,"ip.txt")
+ip_ile_path = os.path.join(BASE_DIR_PATH,"深圳未导入ip.txt")
 
 with open(ip_ile_path) as f:
     for ips in f.readlines():
